@@ -1,7 +1,8 @@
 import { Card } from '@/components/ui/Card'
 import { PulseDot } from '@/components/ui/PulseDot'
 import { HealthTrendChart } from '@/components/charts/HealthTrendChart'
-import { healthScore, healthHistory, healthComponents, healthSummary } from '@/data/businessHealthData'
+import { healthHistory } from '@/data/businessHealthData'
+import { useAppData } from '@/hooks/useAppData'
 import { cn } from '@/utils/cn'
 
 const STATUS_COLOR = {
@@ -10,13 +11,19 @@ const STATUS_COLOR = {
   bad: 'bg-red-500',
 }
 
+// Score, breakdown, and explanation now come from healthScoreService via the
+// intelligence engine — nothing here is hardcoded. Trend history (healthHistory)
+// remains illustrative until score snapshots are persisted (needs the Sprint 7 backend/DB).
 export function BusinessHealthPage() {
+  const { getIntelligence } = useAppData()
+  const { healthScore } = getIntelligence()
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Business Health</h1>
         <p className="text-sm text-[var(--color-muted)] dark:text-[var(--color-muted-dark)]">
-          One score, explained — combining 9 weighted KPIs into your business's overall trajectory.
+          One score, explained — computed from your revenue trend, retention, concentration, and dependency signals.
         </p>
       </div>
 
@@ -27,24 +34,27 @@ export function BusinessHealthPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">Score</p>
           </div>
           <p className="font-data mt-2 text-5xl font-bold">{healthScore.score}</p>
-          <p className={`mt-1 text-sm font-medium ${healthScore.change < 0 ? 'text-red-600' : 'text-green-600'}`}>
-            {healthScore.change > 0 ? '+' : ''}{healthScore.change} pts vs last month
-          </p>
-          <div className="mt-4 rounded-lg bg-[var(--color-accent-soft)] p-3 text-xs text-[var(--color-accent)] dark:bg-[var(--color-accent-soft-dark)]">
-            {healthSummary}
+          <p className="mt-1 text-xs text-[var(--color-muted)]">out of 100</p>
+          <div className="mt-4 space-y-1.5 rounded-lg bg-[var(--color-accent-soft)] p-3 text-xs text-[var(--color-accent)] dark:bg-[var(--color-accent-soft-dark)]">
+            {healthScore.explanation.map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
           </div>
         </Card>
 
         <Card className="lg:col-span-2">
-          <p className="mb-2 text-sm font-semibold">Score Trend (6 months)</p>
+          <p className="mb-2 text-sm font-semibold">Score Trend (illustrative)</p>
           <HealthTrendChart data={healthHistory} />
+          <p className="mt-2 text-xs text-[var(--color-muted)]">
+            Trend history will reflect real historical scores once snapshots are persisted (Sprint 7 backend).
+          </p>
         </Card>
       </div>
 
       <Card>
         <p className="mb-4 text-sm font-semibold">Score Breakdown by Component</p>
         <div className="space-y-4">
-          {healthComponents.map((c) => (
+          {healthScore.breakdown.map((c) => (
             <div key={c.label}>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="text-[var(--color-ink)] dark:text-[var(--color-ink-dark)]">{c.label}</span>
@@ -55,7 +65,7 @@ export function BusinessHealthPage() {
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
                 <div
                   className={cn('h-full rounded-full', STATUS_COLOR[c.status])}
-                  style={{ width: `${(c.contribution / c.weight) * 100}%` }}
+                  style={{ width: `${Math.min(100, (c.contribution / c.weight) * 100)}%` }}
                 />
               </div>
             </div>

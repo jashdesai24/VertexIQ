@@ -1,58 +1,62 @@
 import { createContext, useMemo, useState } from 'react'
-import { deriveMetricsFromRows } from '@/utils/csvParser'
-import * as demo from '@/data/dashboardData'
+import { computeIntelligence } from '@/services/intelligenceEngine'
+import { demoOrders } from '@/data/demoOrders'
+import { quickActions } from '@/data/dashboardData'
 
 export const DataContext = createContext(null)
 
-// Owns the uploaded CSV (if any) and produces one merged "dashboard data" object:
-// fields we can derive from the CSV (revenue, customer growth, top products/customers,
-// forecast) come from the upload; fields we can't yet (health score, retention,
-// decisions, alerts — these need the Sprint 6 ML/rules layer) fall back to demo data.
-// Components always read through getDashboardData() and never touch demo/ files directly.
+// Single source of truth for "what data is the app showing right now" — either
+// the uploaded CSV or the built-in demo dataset. BOTH run through the exact
+// same computeIntelligence() engine, so nothing (health score, alerts, churn,
+// recommendations) is hardcoded, even in demo mode. Components read only
+// through getDashboardData()/getIntelligence() and never touch services/ or
+// data/ files directly — that boundary is what lets Sprint 7's backend or a
+// future ML model replace the engine without any component changing.
 export function DataProvider({ children }) {
   const [uploadedRows, setUploadedRows] = useState(null)
   const [fileName, setFileName] = useState(null)
 
-  const derived = useMemo(() => (uploadedRows ? deriveMetricsFromRows(uploadedRows) : null), [uploadedRows])
+  const isDemoData = !uploadedRows
+  const activeRows = uploadedRows ?? demoOrders
+
+  const intelligence = useMemo(() => computeIntelligence(activeRows), [activeRows])
 
   const dashboardData = useMemo(() => {
-    if (!derived) {
-      return {
-        isDemoData: true,
-        fileName: null,
-        businessHealthScore: demo.businessHealthScore,
-        kpis: demo.kpis,
-        forecastData: demo.forecastData,
-        topProducts: demo.topProducts,
-        topCustomers: demo.topCustomers,
-        recentAlerts: demo.recentAlerts,
-        upcomingRisks: demo.upcomingRisks,
-        businessOpportunities: demo.businessOpportunities,
-        quickActions: demo.quickActions,
-      }
-    }
+    const { metrics, healthScore, alerts, opportunities, churnSummary } = intelligence
 
-    // Merge: override what we derived, keep demo placeholders for everything else.
-    const kpis = demo.kpis.map((kpi) => {
-      if (kpi.id === 'revenue') return { ...kpi, value: derived.revenue, change: 0 }
-      if (kpi.id === 'growth') return { ...kpi, value: derived.customerCount, change: 0 }
-      return kpi // profit/retention need cost + repeat-purchase data — still demo until Sprint 6
-    })
+    // Assumed 32% margin (no cost/COGS column exists in the CSV schema yet —
+    // this is a documented placeholder until real cost data arrives, e.g. via
+    // the Sprint 7 backend). Retention approximated from churn risk ratio.
+    const profit = Math.round(metrics.revenue * 0.32)
+    const retention = Math.round((1 - churnSummary.highRiskRatio) * 100)
+
+    const kpis = [
+      { id: 'revenue', label: 'Revenue', value: metrics.revenue, change: metrics.revenueGrowthPct, format: 'currency', icon: 'revenue' },
+      { id: 'profit', label: 'Profit', value: profit, change: metrics.revenueGrowthPct, format: 'currency', icon: 'profit' },
+      { id: 'growth', label: 'Customer Growth', value: metrics.customerCount, change: metrics.revenueGrowthPct, format: 'number', icon: 'growth' },
+      { id: 'retention', label: 'Retention Rate', value: retention, change: -Math.round(churnSummary.highRiskRatio * 100), format: 'percent', icon: 'retention' },
+    ]
+
+    const recentAlerts = alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text }))
+    const upcomingRisks = alerts
+      .filter((a) => a.type === 'danger')
+      .map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' }))
+    const businessOpportunities = opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact }))
 
     return {
-      isDemoData: false,
+      isDemoData,
       fileName,
-      businessHealthScore: demo.businessHealthScore, // Sprint 6: compute from real churn/sentiment
+      businessHealthScore: { score: healthScore.score, change: 0 }, // trend history needs persistence — arrives with Sprint 7 backend/DB
       kpis,
-      forecastData: derived.forecastData.length ? derived.forecastData : demo.forecastData,
-      topProducts: derived.topProducts.length ? derived.topProducts : demo.topProducts,
-      topCustomers: derived.topCustomers.length ? derived.topCustomers : demo.topCustomers,
-      recentAlerts: demo.recentAlerts, // Sprint 6: generate from real inventory/sentiment signals
-      upcomingRisks: demo.upcomingRisks,
-      businessOpportunities: demo.businessOpportunities,
-      quickActions: demo.quickActions,
+      forecastData: metrics.forecastData,
+      topProducts: metrics.topProducts,
+      topCustomers: metrics.topCustomers,
+      recentAlerts,
+      upcomingRisks,
+      businessOpportunities,
+      quickActions,
     }
-  }, [derived, fileName])
+  }, [intelligence, isDemoData, fileName])
 
   const uploadData = (rows, name) => {
     setUploadedRows(rows)
@@ -65,7 +69,17 @@ export function DataProvider({ children }) {
   }
 
   return (
-    <DataContext.Provider value={{ uploadedRows, fileName, uploadData, clearData, getDashboardData: () => dashboardData }}>
+    <DataContext.Provider
+      value={{
+        uploadedRows,
+        fileName,
+        isDemoData,
+        uploadData,
+        clearData,
+        getDashboardData: () => dashboardData,
+        getIntelligence: () => intelligence,
+      }}
+    >
       {children}
     </DataContext.Provider>
   )

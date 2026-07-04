@@ -18,6 +18,7 @@ import {
 import { decisions } from '@/data/decisionData'
 import { useAppData } from '@/hooks/useAppData'
 import { formatCurrency } from '@/utils/format'
+import { ExecutiveSummaryCard } from '@/components/dashboard/ExecutiveSummaryCard'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -27,6 +28,7 @@ const fadeUp = {
 // Premium-pass hero page: same widgets as Sprint 3, upgraded with staggered
 // entrance motion, hover elevation, and tighter visual hierarchy.
 export function DashboardPage() {
+  const { getDashboardData, getIntelligence } = useAppData()
   const {
     isDemoData,
     fileName,
@@ -39,7 +41,8 @@ export function DashboardPage() {
     upcomingRisks,
     businessOpportunities,
     quickActions,
-  } = useAppData().getDashboardData()
+  } = getDashboardData()
+  const { executiveSummary, insights } = getIntelligence()
   const topDecisions = decisions.slice(0, 3)
 
   return (
@@ -71,6 +74,12 @@ export function DashboardPage() {
           This is demo data. Upload your own CSV in Settings to see your real numbers →
         </Link>
       )}
+
+      <ExecutiveSummaryCard
+        summary={executiveSummary}
+        topCustomer={insights.mostValuableCustomer}
+        topProduct={insights.mostPurchasedProduct}
+      />
 
       {/* Row 1: Business Health + KPIs */}
       <motion.div
