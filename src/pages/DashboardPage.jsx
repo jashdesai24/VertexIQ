@@ -15,18 +15,8 @@ import {
   Zap,
   Sparkles,
 } from 'lucide-react'
-import {
-  businessHealthScore,
-  kpis,
-  forecastData,
-  topProducts,
-  topCustomers,
-  recentAlerts,
-  upcomingRisks,
-  businessOpportunities,
-  quickActions,
-} from '@/data/dashboardData'
 import { decisions } from '@/data/decisionData'
+import { useAppData } from '@/hooks/useAppData'
 import { formatCurrency } from '@/utils/format'
 
 const fadeUp = {
@@ -37,6 +27,19 @@ const fadeUp = {
 // Premium-pass hero page: same widgets as Sprint 3, upgraded with staggered
 // entrance motion, hover elevation, and tighter visual hierarchy.
 export function DashboardPage() {
+  const {
+    isDemoData,
+    fileName,
+    businessHealthScore,
+    kpis,
+    forecastData,
+    topProducts,
+    topCustomers,
+    recentAlerts,
+    upcomingRisks,
+    businessOpportunities,
+    quickActions,
+  } = useAppData().getDashboardData()
   const topDecisions = decisions.slice(0, 3)
 
   return (
@@ -56,9 +59,18 @@ export function DashboardPage() {
         </div>
         <div className="hidden items-center gap-2 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)] dark:border-[var(--color-border-dark)] sm:flex">
           <PulseDot />
-          AI monitoring live
+          {isDemoData ? 'Showing demo data' : `Showing data from ${fileName}`}
         </div>
       </motion.div>
+
+      {isDemoData && (
+        <Link
+          to="/app/settings"
+          className="block rounded-lg border border-dashed border-[var(--color-border)] px-4 py-2.5 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] dark:border-[var(--color-border-dark)]"
+        >
+          This is demo data. Upload your own CSV in Settings to see your real numbers →
+        </Link>
+      )}
 
       {/* Row 1: Business Health + KPIs */}
       <motion.div

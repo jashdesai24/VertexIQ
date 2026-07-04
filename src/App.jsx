@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { BusinessHealthPage } from '@/pages/BusinessHealthPage'
 import { DecisionCenterPage } from '@/pages/DecisionCenterPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 
 // Route tree mirrors constants/nav.js exactly. Public routes use PublicLayout
 // (no sidebar); every /app/* route uses ProtectedLayout (sidebar + navbar).
@@ -29,7 +30,7 @@ export default function App() {
         <Route path="forecast" element={<PlaceholderPage title="Sales Forecast" />} />
         <Route path="sentiment" element={<PlaceholderPage title="Review Sentiment" />} />
         <Route path="reports" element={<PlaceholderPage title="Reports" />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<PlaceholderPage title="Profile" />} />
       </Route>
     </Routes>
