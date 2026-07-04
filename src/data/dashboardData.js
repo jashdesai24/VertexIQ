@@ -8,11 +8,13 @@ export const businessHealthScore = {
 }
 
 export const kpis = [
-  { id: 'revenue', label: 'Revenue', value: 1842000, change: 8.2, format: 'currency' },
-  { id: 'profit', label: 'Profit', value: 512000, change: 4.6, format: 'currency' },
-  { id: 'growth', label: 'Customer Growth', value: 214, change: 12.4, format: 'number' },
-  { id: 'retention', label: 'Retention Rate', value: 84.3, change: -2.1, format: 'percent' },
+  { id: 'revenue', label: 'Revenue', value: 1842000, change: 8.2, format: 'currency', icon: 'revenue' },
+  { id: 'profit', label: 'Profit', value: 512000, change: 4.6, format: 'currency', icon: 'profit' },
+  { id: 'growth', label: 'Customer Growth', value: 214, change: 12.4, format: 'number', icon: 'growth' },
+  { id: 'retention', label: 'Retention Rate', value: 84.3, change: -2.1, format: 'percent', icon: 'retention' },
 ]
+
+export const churnRiskSummary = { count: 34, revenueAtRisk: 420000 }
 
 export const forecastData = [
   { month: 'Feb', actual: 1420000, forecast: null },
