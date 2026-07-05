@@ -1,16 +1,18 @@
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { useAppData } from '@/hooks/useAppData'
+import { getLocalChurn } from '@/services/localFallback'
 import { formatCurrency } from '@/utils/format'
 
 const RISK_VARIANT = { High: 'danger', Medium: 'warning', Low: 'success', Unknown: 'neutral' }
 
-// Rule-based churn prediction (see services/churnService.js):
-// >60 days inactive = High, 30-60 = Medium, <30 = Low. No ML — explicit rules,
-// swappable for a trained classifier later without touching this page.
+// Rule-based churn prediction (see src/services/churnService.js):
+// >60 days inactive = High, 30-60 = Medium, <30 = Low. No ML.
+// NOTE: Sprint 7 didn't create a /api/churn endpoint, and it wasn't in Sprint
+// 7.5's scope either — this page continues reading local/demo data only.
+// Add a backend endpoint + swap to useBackendResource() in a future sprint so
+// uploaded (non-demo) data can power this page too.
 export function ChurnPredictionPage() {
-  const { getIntelligence } = useAppData()
-  const { churnList, churnSummary } = getIntelligence()
+  const { churnList, churnSummary } = getLocalChurn()
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,12 @@
 import { Card } from '@/components/ui/Card'
 import { PulseDot } from '@/components/ui/PulseDot'
 import { HealthTrendChart } from '@/components/charts/HealthTrendChart'
+import { LoadingState, ErrorState, FallbackBanner } from '@/components/ui/AsyncState'
 import { healthHistory } from '@/data/businessHealthData'
 import { useAppData } from '@/hooks/useAppData'
+import { useBackendResource } from '@/hooks/useBackendResource'
+import { api } from '@/services/apiClient'
+import { getLocalBusinessHealth } from '@/services/localFallback'
 import { cn } from '@/utils/cn'
 
 const STATUS_COLOR = {
@@ -11,12 +15,20 @@ const STATUS_COLOR = {
   bad: 'bg-red-500',
 }
 
-// Score, breakdown, and explanation now come from healthScoreService via the
-// intelligence engine — nothing here is hardcoded. Trend history (healthHistory)
-// remains illustrative until score snapshots are persisted (needs the Sprint 7 backend/DB).
+// Score, breakdown, and explanation now come from GET /api/business-health
+// (falls back to local computation if the backend is unreachable — see
+// services/localFallback.js). Trend history remains illustrative until score
+// snapshots are persisted server-side.
 export function BusinessHealthPage() {
-  const { getIntelligence } = useAppData()
-  const { healthScore } = getIntelligence()
+  const { dataVersion } = useAppData()
+  const { data, loading, error, isFallback, retry } = useBackendResource(
+    api.getBusinessHealth,
+    getLocalBusinessHealth,
+    [dataVersion]
+  )
+
+  if (loading) return <LoadingState label="Computing your Business Health Score…" />
+  if (!data) return <ErrorState message={error} onRetry={retry} />
 
   return (
     <div className="space-y-6">
@@ -27,16 +39,18 @@ export function BusinessHealthPage() {
         </p>
       </div>
 
+      {isFallback && <FallbackBanner onRetry={retry} />}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <div className="flex items-center gap-2">
             <PulseDot />
             <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">Score</p>
           </div>
-          <p className="font-data mt-2 text-5xl font-bold">{healthScore.score}</p>
+          <p className="font-data mt-2 text-5xl font-bold">{data.score}</p>
           <p className="mt-1 text-xs text-[var(--color-muted)]">out of 100</p>
           <div className="mt-4 space-y-1.5 rounded-lg bg-[var(--color-accent-soft)] p-3 text-xs text-[var(--color-accent)] dark:bg-[var(--color-accent-soft-dark)]">
-            {healthScore.explanation.map((line, i) => (
+            {data.explanation.map((line, i) => (
               <p key={i}>{line}</p>
             ))}
           </div>
@@ -46,7 +60,7 @@ export function BusinessHealthPage() {
           <p className="mb-2 text-sm font-semibold">Score Trend (illustrative)</p>
           <HealthTrendChart data={healthHistory} />
           <p className="mt-2 text-xs text-[var(--color-muted)]">
-            Trend history will reflect real historical scores once snapshots are persisted (Sprint 7 backend).
+            Trend history will reflect real historical scores once snapshots are persisted server-side.
           </p>
         </Card>
       </div>
@@ -54,7 +68,7 @@ export function BusinessHealthPage() {
       <Card>
         <p className="mb-4 text-sm font-semibold">Score Breakdown by Component</p>
         <div className="space-y-4">
-          {healthScore.breakdown.map((c) => (
+          {data.breakdown.map((c) => (
             <div key={c.label}>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="text-[var(--color-ink)] dark:text-[var(--color-ink-dark)]">{c.label}</span>

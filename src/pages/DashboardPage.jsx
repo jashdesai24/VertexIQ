@@ -17,6 +17,10 @@ import {
 } from 'lucide-react'
 import { decisions } from '@/data/decisionData'
 import { useAppData } from '@/hooks/useAppData'
+import { useBackendResource } from '@/hooks/useBackendResource'
+import { api } from '@/services/apiClient'
+import { getLocalDashboard, getLocalExecutiveSummary, getLocalAlerts } from '@/services/localFallback'
+import { LoadingState, ErrorState, FallbackBanner } from '@/components/ui/AsyncState'
 import { formatCurrency } from '@/utils/format'
 import { ExecutiveSummaryCard } from '@/components/dashboard/ExecutiveSummaryCard'
 
@@ -28,7 +32,14 @@ const fadeUp = {
 // Premium-pass hero page: same widgets as Sprint 3, upgraded with staggered
 // entrance motion, hover elevation, and tighter visual hierarchy.
 export function DashboardPage() {
-  const { getDashboardData, getIntelligence } = useAppData()
+  const { dataVersion } = useAppData()
+  const dashboard = useBackendResource(api.getDashboard, getLocalDashboard, [dataVersion])
+  const summary = useBackendResource(api.getExecutiveSummary, getLocalExecutiveSummary, [dataVersion])
+  const alertsRes = useBackendResource(api.getAlerts, getLocalAlerts, [dataVersion])
+
+  if (dashboard.loading || summary.loading || alertsRes.loading) return <LoadingState label="Loading your dashboard…" />
+  if (!dashboard.data) return <ErrorState message={dashboard.error} onRetry={dashboard.retry} />
+
   const {
     isDemoData,
     fileName,
@@ -37,13 +48,25 @@ export function DashboardPage() {
     forecastData,
     topProducts,
     topCustomers,
-    recentAlerts,
-    upcomingRisks,
-    businessOpportunities,
     quickActions,
-  } = getDashboardData()
-  const { executiveSummary, insights } = getIntelligence()
+  } = dashboard.data
+  const executiveSummary = summary.data
   const topDecisions = decisions.slice(0, 3)
+
+  // Smart Alerts (its own backend resource — /api/alerts) mapped into the
+  // same widget shapes the Dashboard cards expect. Mirrors the mapping
+  // backend/controllers/dashboardController.js does server-side, kept in
+  // sync intentionally since both read the same alertsService output.
+  const alertsData = alertsRes.data
+  const recentAlerts = alertsData
+    ? alertsData.alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text }))
+    : []
+  const upcomingRisks = alertsData
+    ? alertsData.alerts.filter((a) => a.type === 'danger').map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' }))
+    : []
+  const businessOpportunities = alertsData
+    ? alertsData.opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact }))
+    : []
 
   return (
     <div className="space-y-6">
@@ -77,9 +100,11 @@ export function DashboardPage() {
 
       <ExecutiveSummaryCard
         summary={executiveSummary}
-        topCustomer={insights.mostValuableCustomer}
-        topProduct={insights.mostPurchasedProduct}
+        topCustomer={executiveSummary.topCustomer}
+        topProduct={executiveSummary.topProduct}
       />
+
+      {(dashboard.isFallback || summary.isFallback || alertsRes.isFallback) && <FallbackBanner onRetry={dashboard.retry} />}
 
       {/* Row 1: Business Health + KPIs */}
       <motion.div

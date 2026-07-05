@@ -1,19 +1,39 @@
-import { useState } from 'react'
-import { UploadCloud, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { UploadCloud, CheckCircle2, AlertCircle, Trash2, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { parseCSVFile, validateRows } from '@/utils/csvParser'
 import { useAppData } from '@/hooks/useAppData'
+import { api } from '@/services/apiClient'
 
-// V1 scope: CSV upload only (see PROJECT_MEMORY.md — live integrations are V2).
-// Flow: select file -> parse with PapaParse -> preview first 10 rows -> Confirm
-// commits to DataContext (Dashboard updates immediately) or Clear reverts to demo data.
+// V1 scope: CSV upload only. PapaParse still runs client-side (needed for the
+// preview table before the person commits), but persistence now goes through
+// the backend: POST /api/upload on confirm, DELETE /api/upload to revert to
+// demo data. No local fallback here — uploading genuinely requires the backend;
+// read-only pages (Dashboard etc.) are the ones that fall back to demo data.
 export function SettingsPage() {
-  const { uploadData, clearData, fileName, uploadedRows } = useAppData()
-  const [preview, setPreview] = useState(null) // { rows, fields, fileName }
+  const { uploadData, clearData, dataVersion } = useAppData()
+  const [status, setStatus] = useState({ loading: true, isDemoData: true, fileName: null, unreachable: false })
+  const [preview, setPreview] = useState(null)
   const [error, setError] = useState(null)
   const [isParsing, setIsParsing] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const loadStatus = async () => {
+    setStatus((s) => ({ ...s, loading: true }))
+    try {
+      const data = await api.getUploadStatus()
+      setStatus({ loading: false, isDemoData: data.isDemoData, fileName: data.fileName, unreachable: false })
+    } catch {
+      setStatus({ loading: false, isDemoData: true, fileName: null, unreachable: true })
+    }
+  }
+
+  useEffect(() => {
+    loadStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataVersion])
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
@@ -37,10 +57,27 @@ export function SettingsPage() {
     }
   }
 
-  const confirmUpload = () => {
+  const confirmUpload = async () => {
     if (!preview) return
-    uploadData(preview.rows, preview.fileName)
-    setPreview(null)
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      await uploadData(preview.fileName, preview.rows)
+      setPreview(null)
+    } catch (err) {
+      setError(`Upload failed: ${err.message}. Is the backend running?`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleClear = async () => {
+    setError(null)
+    try {
+      await clearData()
+    } catch (err) {
+      setError(`Couldn't clear data: ${err.message}. Is the backend running?`)
+    }
   }
 
   return (
@@ -61,19 +98,27 @@ export function SettingsPage() {
           <code className="rounded bg-gray-100 px-1 dark:bg-white/10">order_date</code>
         </p>
 
-        {uploadedRows ? (
+        {status.loading ? (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-[var(--color-muted)] dark:bg-white/5">
+            <Loader2 size={13} className="animate-spin" /> Checking current data source…
+          </div>
+        ) : status.unreachable ? (
+          <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
+            Backend unreachable — uploads are disabled until the backend is running. Other pages will show demo data in the meantime.
+          </div>
+        ) : status.isDemoData ? (
+          <div className="mb-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-[var(--color-muted)] dark:bg-white/5">
+            No file uploaded — Dashboard is currently showing demo data.
+          </div>
+        ) : (
           <div className="mb-4 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm dark:bg-green-500/10">
             <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
               <CheckCircle2 size={16} />
-              Using <span className="font-medium">{fileName}</span> ({uploadedRows.length} rows)
+              Using <span className="font-medium">{status.fileName}</span>
             </div>
-            <button onClick={clearData} className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline">
+            <button onClick={handleClear} className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline">
               <Trash2 size={13} /> Clear & use demo data
             </button>
-          </div>
-        ) : (
-          <div className="mb-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-[var(--color-muted)] dark:bg-white/5">
-            No file uploaded — Dashboard is currently showing demo data.
           </div>
         )}
 
@@ -100,8 +145,10 @@ export function SettingsPage() {
               Preview — {preview.fileName} <Badge variant="accent">{preview.rows.length} rows</Badge>
             </p>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button>
-              <Button onClick={confirmUpload}>Confirm & Use This Data</Button>
+              <Button variant="secondary" onClick={() => setPreview(null)} disabled={isSubmitting}>Cancel</Button>
+              <Button onClick={confirmUpload} disabled={isSubmitting}>
+                {isSubmitting ? 'Uploading…' : 'Confirm & Use This Data'}
+              </Button>
             </div>
           </div>
           <div className="overflow-x-auto rounded-lg border border-[var(--color-border)] dark:border-[var(--color-border-dark)]">
