@@ -7,6 +7,7 @@ import alertsRoutes from './alertsRoutes.js'
 import recommendationsRoutes from './recommendationsRoutes.js'
 import uploadRoutes from './uploadRoutes.js'
 import datasetsRoutes from './datasetsRoutes.js'
+import workspaceRoutes from './workspaceRoutes.js'
 
 // Single mount point — server.js only needs to know about this one router.
 // Adding a new API resource later means one line here, not touching server.js.
@@ -19,5 +20,6 @@ router.use('/alerts', alertsRoutes)
 router.use('/recommendations', recommendationsRoutes)
 router.use('/upload', uploadRoutes)
 router.use('/datasets', datasetsRoutes)
+router.use('/workspace', workspaceRoutes)
 
 export default router

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { parseCSVFile, validateRows } from '@/utils/csvParser'
 import { useAppData } from '@/hooks/useAppData'
 import { api } from '@/services/apiClient'
+import { DatasetHistory } from '@/components/settings/DatasetHistory'
 
 // V1 scope: CSV upload only. PapaParse still runs client-side (needed for the
 // preview table before the person commits), but persistence now goes through
@@ -175,6 +176,8 @@ export function SettingsPage() {
           </div>
         </Card>
       )}
+
+      <DatasetHistory />
     </div>
   )
 }

@@ -10,7 +10,19 @@ import apiRoutes from './routes/index.js'
 const app = express()
 const PORT = process.env.PORT || 5000
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }))
+// CORS_ORIGIN supports a comma-separated list (e.g. production Vercel URL +
+// preview deployment URLs). Falls back to '*' only if unset, which is fine
+// for local dev but should always be set explicitly in production.
+const allowedOrigins = (process.env.CORS_ORIGIN || '*')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
+
+app.use(
+  cors({
+    origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
+  })
+)
 app.use(express.json())
 app.use(requestLogger)
 

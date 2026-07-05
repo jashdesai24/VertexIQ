@@ -32,4 +32,8 @@ export const api = {
   getUploadStatus: () => http.get('/upload/status'),
   uploadData: (fileName, rows) => http.post('/upload', { fileName, rows }),
   clearUpload: () => http.delete('/upload'),
+  getDatasets: () => http.get('/datasets'),
+  selectDataset: (id) => http.post(`/datasets/${id}/select`),
+  deleteDataset: (id) => http.delete(`/datasets/${id}`),
+  getCurrentWorkspace: () => http.get('/workspace/current'),
 }

@@ -1,8 +1,8 @@
 import mongoose from 'mongoose'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { AppError } from '../utils/AppError.js'
-import { listDatasets, getDatasetById, deleteDatasetById } from '../services/datasetService.js'
-import { clearPersistedIntelligence } from '../services/intelligencePersistenceService.js'
+import { listDatasets, getDatasetById, deleteDatasetById, selectDatasetById } from '../services/datasetService.js'
+import { clearPersistedIntelligence, generateAndPersistIntelligence } from '../services/intelligencePersistenceService.js'
 import { DEFAULT_WORKSPACE_ID } from '../config/workspace.js'
 
 function assertValidId(id) {
@@ -32,4 +32,15 @@ export const deleteDataset = asyncHandler(async (req, res) => {
     await clearPersistedIntelligence(dataset.workspaceId)
   }
   res.json({ success: true, message: `Dataset "${dataset.fileName}" deleted.` })
+})
+
+// POST /api/datasets/:id/select — makes this dataset active and regenerates
+// all persisted intelligence from it (same generateAndPersistIntelligence
+// used on upload — selecting a dataset is just "re-run intelligence on
+// already-stored rows instead of newly-parsed ones").
+export const selectDataset = asyncHandler(async (req, res) => {
+  assertValidId(req.params.id)
+  const dataset = await selectDatasetById(DEFAULT_WORKSPACE_ID, req.params.id)
+  await generateAndPersistIntelligence(DEFAULT_WORKSPACE_ID, dataset._id, dataset.rows)
+  res.json({ success: true, data: { datasetId: dataset._id, fileName: dataset.fileName, rowCount: dataset.rowCount } })
 })

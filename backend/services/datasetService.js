@@ -44,3 +44,17 @@ export async function deleteDatasetById(id) {
   await dataset.deleteOne()
   return dataset
 }
+
+// Makes `id` the active dataset for its workspace (deactivating any other
+// active dataset first), so exactly one dataset is ever active per workspace
+// — same invariant createDataset() maintains on upload.
+export async function selectDatasetById(workspaceId, id) {
+  const dataset = await Dataset.findById(id)
+  if (!dataset) throw new AppError('Dataset not found', 404)
+  if (dataset.workspaceId !== workspaceId) throw new AppError('Dataset does not belong to this workspace', 403)
+
+  await Dataset.updateMany({ workspaceId, isActive: true }, { isActive: false })
+  dataset.isActive = true
+  await dataset.save()
+  return dataset
+}
