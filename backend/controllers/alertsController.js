@@ -1,11 +1,8 @@
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getActiveDataset } from '../services/dataService.js'
-import { computeIntelligence } from '../services/intelligenceEngine.js'
+import { getAlertsSnapshot } from '../services/dataService.js'
+import { DEFAULT_WORKSPACE_ID } from '../config/workspace.js'
 
-// GET /api/alerts — Smart Alerts + Opportunities, each with priority/reason/action.
 export const getAlerts = asyncHandler(async (req, res) => {
-  const { rows, isDemoData, fileName } = await getActiveDataset()
-  const { alerts, opportunities, churnSummary } = computeIntelligence(rows)
-
-  res.json({ success: true, data: { alerts, opportunities, churnSummary, isDemoData, fileName } })
+  const data = await getAlertsSnapshot(DEFAULT_WORKSPACE_ID)
+  res.json({ success: true, data })
 })

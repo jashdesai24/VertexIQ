@@ -1,12 +1,8 @@
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getActiveDataset } from '../services/dataService.js'
-import { computeIntelligence } from '../services/intelligenceEngine.js'
+import { getRecommendationsSnapshot } from '../services/dataService.js'
+import { DEFAULT_WORKSPACE_ID } from '../config/workspace.js'
 
-// GET /api/recommendations — per-customer product recommendations
-// (see services/recommendationService.js — popularity-gap logic, no ML yet).
 export const getRecommendations = asyncHandler(async (req, res) => {
-  const { rows, isDemoData, fileName } = await getActiveDataset()
-  const { recommendations } = computeIntelligence(rows)
-
-  res.json({ success: true, data: { recommendations, isDemoData, fileName } })
+  const data = await getRecommendationsSnapshot(DEFAULT_WORKSPACE_ID)
+  res.json({ success: true, data })
 })

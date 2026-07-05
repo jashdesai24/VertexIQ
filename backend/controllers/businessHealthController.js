@@ -1,12 +1,8 @@
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getActiveDataset } from '../services/dataService.js'
-import { computeIntelligence } from '../services/intelligenceEngine.js'
+import { getBusinessHealthSnapshot } from '../services/dataService.js'
+import { DEFAULT_WORKSPACE_ID } from '../config/workspace.js'
 
-// GET /api/business-health — score, breakdown, and explanation (see
-// services/healthScoreService.js for the weighted rules).
 export const getBusinessHealth = asyncHandler(async (req, res) => {
-  const { rows, isDemoData, fileName } = await getActiveDataset()
-  const { healthScore } = computeIntelligence(rows)
-
-  res.json({ success: true, data: { ...healthScore, isDemoData, fileName } })
+  const data = await getBusinessHealthSnapshot(DEFAULT_WORKSPACE_ID)
+  res.json({ success: true, data })
 })
