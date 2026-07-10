@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { StatCard } from '@/components/ui/StatCard'
@@ -37,6 +38,22 @@ export function DashboardPage() {
   const summary = useBackendResource(api.getExecutiveSummary, getLocalExecutiveSummary, [dataVersion])
   const alertsRes = useBackendResource(api.getAlerts, getLocalAlerts, [dataVersion])
 
+  // Smart Alerts mapped into the same widget shapes the Dashboard cards
+  // expect. Memoized so re-renders unrelated to alerts data (theme toggle,
+  // etc.) don't re-run these array transforms. Must run before any early
+  // return below — hooks can't be called conditionally.
+  const alertsData = alertsRes.data
+  const { recentAlerts, upcomingRisks, businessOpportunities } = useMemo(() => {
+    if (!alertsData) return { recentAlerts: [], upcomingRisks: [], businessOpportunities: [] }
+    return {
+      recentAlerts: alertsData.alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text })),
+      upcomingRisks: alertsData.alerts
+        .filter((a) => a.type === 'danger')
+        .map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' })),
+      businessOpportunities: alertsData.opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact })),
+    }
+  }, [alertsData])
+
   if (dashboard.loading || summary.loading || alertsRes.loading) return <LoadingState label="Loading your dashboard…" />
   if (!dashboard.data) return <ErrorState message={dashboard.error} onRetry={dashboard.retry} />
 
@@ -52,21 +69,6 @@ export function DashboardPage() {
   } = dashboard.data
   const executiveSummary = summary.data
   const topDecisions = decisions.slice(0, 3)
-
-  // Smart Alerts (its own backend resource — /api/alerts) mapped into the
-  // same widget shapes the Dashboard cards expect. Mirrors the mapping
-  // backend/controllers/dashboardController.js does server-side, kept in
-  // sync intentionally since both read the same alertsService output.
-  const alertsData = alertsRes.data
-  const recentAlerts = alertsData
-    ? alertsData.alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text }))
-    : []
-  const upcomingRisks = alertsData
-    ? alertsData.alerts.filter((a) => a.type === 'danger').map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' }))
-    : []
-  const businessOpportunities = alertsData
-    ? alertsData.opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact }))
-    : []
 
   return (
     <div className="space-y-6">
@@ -98,11 +100,7 @@ export function DashboardPage() {
         </Link>
       )}
 
-      <ExecutiveSummaryCard
-        summary={executiveSummary}
-        topCustomer={executiveSummary.topCustomer}
-        topProduct={executiveSummary.topProduct}
-      />
+      <ExecutiveSummaryCard summary={executiveSummary} />
 
       {(dashboard.isFallback || summary.isFallback || alertsRes.isFallback) && <FallbackBanner onRetry={dashboard.retry} />}
 

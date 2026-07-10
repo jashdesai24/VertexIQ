@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 
 // Owns dark/light mode as app-wide state. Reads the saved preference (or system
 // preference on first visit) once, then keeps <html class="dark"> in sync so
@@ -22,11 +22,11 @@ export function ThemeProvider({ children }) {
     localStorage.setItem('aura-theme', theme)
   }, [theme])
 
-  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  const toggleTheme = useCallback(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), [])
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
+  // Memoized so consumers (Navbar, etc.) only re-render when theme itself
+  // changes, not on every ThemeProvider render.
+  const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme, toggleTheme])
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

@@ -41,6 +41,6 @@ export const deleteDataset = asyncHandler(async (req, res) => {
 export const selectDataset = asyncHandler(async (req, res) => {
   assertValidId(req.params.id)
   const dataset = await selectDatasetById(DEFAULT_WORKSPACE_ID, req.params.id)
-  await generateAndPersistIntelligence(DEFAULT_WORKSPACE_ID, dataset._id, dataset.rows)
+  await generateAndPersistIntelligence(DEFAULT_WORKSPACE_ID, dataset)
   res.json({ success: true, data: { datasetId: dataset._id, fileName: dataset.fileName, rowCount: dataset.rowCount } })
 })

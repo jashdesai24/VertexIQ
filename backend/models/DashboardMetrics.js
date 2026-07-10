@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 const dashboardMetricsSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, unique: true, index: true },
   datasetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dataset', required: true },
+  fileName: { type: String, required: true }, // denormalized from Dataset to avoid an extra query on every read
   kpis: { type: [mongoose.Schema.Types.Mixed], required: true },
   forecastData: { type: [mongoose.Schema.Types.Mixed], required: true },
   topProducts: { type: [mongoose.Schema.Types.Mixed], required: true },

@@ -3,9 +3,9 @@ import { Card } from '@/components/ui/Card'
 import { PulseDot } from '@/components/ui/PulseDot'
 
 // The AI Executive Summary — top-of-Dashboard narrative generated entirely
-// from executiveSummaryService output (rule-based today, LLM-backed in Sprint 9;
+// from executiveSummaryService output (rule-based today, LLM-backed later;
 // this component doesn't change either way since it just renders the object).
-export function ExecutiveSummaryCard({ summary, topCustomer, topProduct }) {
+export function ExecutiveSummaryCard({ summary }) {
   return (
     <Card className="border-[var(--color-accent)]/20 bg-gradient-to-br from-[var(--color-accent-soft)] to-transparent dark:from-[var(--color-accent-soft-dark)]">
       <div className="mb-3 flex items-center gap-2">
@@ -19,8 +19,8 @@ export function ExecutiveSummaryCard({ summary, topCustomer, topProduct }) {
       <ul className="space-y-1.5 text-sm text-[var(--color-ink)] dark:text-[var(--color-ink-dark)]">
         <li>{summary.revenueTrend}</li>
         <li>{summary.customerGrowth}</li>
-        <li>Top customer: <span className="font-medium">{topCustomer || '—'}</span></li>
-        <li>Highest-selling product: <span className="font-medium">{topProduct || '—'}</span></li>
+        <li>Top customer: <span className="font-medium">{summary.topCustomer || '—'}</span></li>
+        <li>Highest-selling product: <span className="font-medium">{summary.topProduct || '—'}</span></li>
         <li>{summary.concentrationNote}</li>
         <li>{summary.retentionNote}</li>
       </ul>

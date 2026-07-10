@@ -14,7 +14,7 @@ function getLocalIntelligence() {
 }
 
 export function getLocalDashboard() {
-  const { metrics, healthScore, alerts, opportunities, churnSummary } = getLocalIntelligence()
+  const { metrics, healthScore, churnSummary } = getLocalIntelligence()
   const profit = Math.round(metrics.revenue * 0.32)
   const retention = Math.round((1 - churnSummary.highRiskRatio) * 100)
 
@@ -24,9 +24,6 @@ export function getLocalDashboard() {
     { id: 'growth', label: 'Customer Growth', value: metrics.customerCount, change: metrics.revenueGrowthPct, format: 'number', icon: 'growth' },
     { id: 'retention', label: 'Retention Rate', value: retention, change: -Math.round(churnSummary.highRiskRatio * 100), format: 'percent', icon: 'retention' },
   ]
-  const recentAlerts = alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text }))
-  const upcomingRisks = alerts.filter((a) => a.type === 'danger').map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' }))
-  const businessOpportunities = opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact }))
 
   return {
     isDemoData: true,
@@ -36,9 +33,6 @@ export function getLocalDashboard() {
     forecastData: metrics.forecastData,
     topProducts: metrics.topProducts,
     topCustomers: metrics.topCustomers,
-    recentAlerts,
-    upcomingRisks,
-    businessOpportunities,
     quickActions,
   }
 }

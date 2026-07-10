@@ -11,7 +11,7 @@ import { DEFAULT_WORKSPACE_ID } from '../config/workspace.js'
 export const uploadData = asyncHandler(async (req, res) => {
   const { fileName, rows } = req.body
   const dataset = await createDataset(DEFAULT_WORKSPACE_ID, fileName, rows)
-  await generateAndPersistIntelligence(DEFAULT_WORKSPACE_ID, dataset._id, rows)
+  await generateAndPersistIntelligence(DEFAULT_WORKSPACE_ID, dataset)
 
   res.status(201).json({ success: true, data: { datasetId: dataset._id, fileName: dataset.fileName, rowCount: dataset.rowCount } })
 })

@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 const alertSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, unique: true, index: true },
   datasetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dataset', required: true },
+  fileName: { type: String, required: true }, // denormalized from Dataset to avoid an extra query on every read
   alerts: { type: [mongoose.Schema.Types.Mixed], required: true },
   opportunities: { type: [mongoose.Schema.Types.Mixed], required: true },
   churnSummary: { type: mongoose.Schema.Types.Mixed, required: true },

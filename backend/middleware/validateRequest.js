@@ -21,5 +21,15 @@ export function validateUploadPayload(req, res, next) {
     return next(new AppError(`Missing required column(s): ${missing.join(', ')}`, 400))
   }
 
+  // Spot-check value types on the sample row — catches an obviously wrong
+  // CSV (e.g. columns swapped) with a clear message instead of letting bad
+  // data reach MongoDB and fail there as an opaque cast error.
+  if (Number.isNaN(Number(sample.order_value))) {
+    return next(new AppError('order_value must be a number', 400))
+  }
+  if (Number.isNaN(new Date(sample.order_date).getTime())) {
+    return next(new AppError('order_date must be a valid date', 400))
+  }
+
   next()
 }

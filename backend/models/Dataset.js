@@ -24,4 +24,10 @@ const datasetSchema = new mongoose.Schema({
   uploadedAt: { type: Date, default: Date.now },
 })
 
+// Matches getActiveDataset()'s exact query shape ({workspaceId, isActive}) —
+// hit on every dashboard/read request.
+datasetSchema.index({ workspaceId: 1, isActive: 1 })
+// Matches listDatasets()'s query + sort ({workspaceId}, sorted by uploadedAt desc).
+datasetSchema.index({ workspaceId: 1, uploadedAt: -1 })
+
 export const Dataset = mongoose.model('Dataset', datasetSchema)

@@ -8,8 +8,11 @@ import { Recommendation } from '../models/Recommendation.js'
 // Runs the (unchanged) rule-based intelligence engine once, then persists
 // every derived artifact as a per-workspace snapshot (upsert = replace).
 // This is what makes reads instant and stable across refreshes instead of
-// recomputing from raw rows on every GET request.
-export async function generateAndPersistIntelligence(workspaceId, datasetId, rows) {
+// recomputing from raw rows on every GET request. Takes the full `dataset`
+// (not just id+rows) so fileName can be denormalized onto every snapshot —
+// avoids an extra Dataset lookup on every subsequent read (see dataService.js).
+export async function generateAndPersistIntelligence(workspaceId, dataset) {
+  const { _id: datasetId, fileName, rows } = dataset
   const intelligence = computeIntelligence(rows)
   const { metrics, healthScore, executiveSummary, insights, alerts, opportunities, churnSummary, recommendations } = intelligence
 
@@ -19,6 +22,7 @@ export async function generateAndPersistIntelligence(workspaceId, datasetId, row
       {
         workspaceId,
         datasetId,
+        fileName,
         kpis: buildKpis(metrics, churnSummary),
         forecastData: metrics.forecastData,
         topProducts: metrics.topProducts,
@@ -29,22 +33,22 @@ export async function generateAndPersistIntelligence(workspaceId, datasetId, row
     ),
     BusinessHealthSnapshot.findOneAndUpdate(
       { workspaceId },
-      { workspaceId, datasetId, score: healthScore.score, breakdown: healthScore.breakdown, explanation: healthScore.explanation, generatedAt: new Date() },
+      { workspaceId, datasetId, fileName, score: healthScore.score, breakdown: healthScore.breakdown, explanation: healthScore.explanation, generatedAt: new Date() },
       { upsert: true, new: true }
     ),
     BusinessInsight.findOneAndUpdate(
       { workspaceId },
-      { workspaceId, datasetId, executiveSummary, insights, generatedAt: new Date() },
+      { workspaceId, datasetId, fileName, executiveSummary, insights, generatedAt: new Date() },
       { upsert: true, new: true }
     ),
     Alert.findOneAndUpdate(
       { workspaceId },
-      { workspaceId, datasetId, alerts, opportunities, churnSummary, generatedAt: new Date() },
+      { workspaceId, datasetId, fileName, alerts, opportunities, churnSummary, generatedAt: new Date() },
       { upsert: true, new: true }
     ),
     Recommendation.findOneAndUpdate(
       { workspaceId },
-      { workspaceId, datasetId, recommendations, generatedAt: new Date() },
+      { workspaceId, datasetId, fileName, recommendations, generatedAt: new Date() },
       { upsert: true, new: true }
     ),
   ])

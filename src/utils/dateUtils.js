@@ -12,8 +12,3 @@ export function monthKey(dateString) {
   if (Number.isNaN(d.getTime())) return null
   return d.toLocaleString('en-US', { month: 'short', year: '2-digit' })
 }
-
-export function isWithinLastNDays(dateString, n, referenceDate = new Date()) {
-  const days = daysSince(dateString, referenceDate)
-  return days !== null && days <= n
-}
