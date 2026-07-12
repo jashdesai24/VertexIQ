@@ -1,4 +1,5 @@
 import { computeIntelligence } from './intelligenceEngine'
+import { generateAIInsights } from './aiInsightEngine'
 import { demoOrders } from '@/data/demoOrders'
 import { quickActions } from '@/data/dashboardData'
 
@@ -14,7 +15,7 @@ function getLocalIntelligence() {
 }
 
 export function getLocalDashboard() {
-  const { metrics, healthScore, churnSummary } = getLocalIntelligence()
+  const { metrics, healthScore, alerts, opportunities, churnSummary } = getLocalIntelligence()
   const profit = Math.round(metrics.revenue * 0.32)
   const retention = Math.round((1 - churnSummary.highRiskRatio) * 100)
 
@@ -24,6 +25,9 @@ export function getLocalDashboard() {
     { id: 'growth', label: 'Customer Growth', value: metrics.customerCount, change: metrics.revenueGrowthPct, format: 'number', icon: 'growth' },
     { id: 'retention', label: 'Retention Rate', value: retention, change: -Math.round(churnSummary.highRiskRatio * 100), format: 'percent', icon: 'retention' },
   ]
+  const recentAlerts = alerts.slice(0, 5).map((a) => ({ id: a.id, type: a.type, text: a.text }))
+  const upcomingRisks = alerts.filter((a) => a.type === 'danger').map((a) => ({ id: a.id, text: a.text, impact: a.priority === 'high' ? 'High' : 'Medium' }))
+  const businessOpportunities = opportunities.map((o) => ({ id: o.id, text: o.text, impact: o.impact }))
 
   return {
     isDemoData: true,
@@ -33,6 +37,9 @@ export function getLocalDashboard() {
     forecastData: metrics.forecastData,
     topProducts: metrics.topProducts,
     topCustomers: metrics.topCustomers,
+    recentAlerts,
+    upcomingRisks,
+    businessOpportunities,
     quickActions,
   }
 }
@@ -44,6 +51,14 @@ export function getLocalBusinessHealth() {
 export function getLocalExecutiveSummary() {
   const { executiveSummary, insights } = getLocalIntelligence()
   return { ...executiveSummary, insights, isDemoData: true, fileName: null }
+}
+
+// Sprint 10A: offline fallback for the new AI Insight Engine. Reuses the
+// exact same generateAIInsights() function the live path
+// (aiInsightEngine.fetchAndGenerateAIInsights) calls — only the row source
+// differs (demoOrders here vs. the active dataset's real rows there).
+export function getLocalAIInsights() {
+  return generateAIInsights(demoOrders, { isDemoData: true, fileName: null })
 }
 
 export function getLocalAlerts() {
