@@ -24,6 +24,9 @@ import { fetchAndGenerateAIInsights } from '@/services/aiInsightEngine'
 import { LoadingState, ErrorState, FallbackBanner } from '@/components/ui/AsyncState'
 import { formatCurrency } from '@/utils/format'
 import { ExecutiveSummaryCard } from '@/components/dashboard/ExecutiveSummaryCard'
+import { KpiComparisonCard } from '@/components/dashboard/KpiComparisonCard'
+import { OpportunityPanel } from '@/components/dashboard/OpportunityPanel'
+import { RiskPanel } from '@/components/dashboard/RiskPanel'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -120,6 +123,11 @@ export function DashboardPage() {
           <p className={`relative mt-1 text-xs font-medium ${businessHealthScore.change < 0 ? 'text-red-600' : 'text-green-600'}`}>
             {businessHealthScore.change > 0 ? '+' : ''}{businessHealthScore.change} pts vs last month
           </p>
+          {!aiInsights.data.isEmpty && (
+            <p className="relative mt-1 text-xs text-[var(--color-muted)]">
+              BI Score: <span className="font-data font-medium text-[var(--color-ink)] dark:text-[var(--color-ink-dark)]">{aiInsights.data.businessIntelligenceScore.overall}/100</span>
+            </p>
+          )}
           <Link to="/app/business-health" className="relative mt-3 inline-block text-xs font-medium text-[var(--color-accent)] hover:underline">
             View breakdown →
           </Link>
@@ -266,6 +274,36 @@ export function DashboardPage() {
           </ul>
         </Card>
       </motion.div>
+
+      {/* Row 5 (Sprint 10B): KPI Comparison Cards — current vs previous period */}
+      {!aiInsights.data.isEmpty && (
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ duration: 0.45, delay: 0.25 }}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <KpiComparisonCard label="Revenue" format="currency" {...aiInsights.data.comparisons.revenue} />
+          <KpiComparisonCard label="Orders" format="number" {...aiInsights.data.comparisons.orders} />
+          <KpiComparisonCard label="Customers" format="number" {...aiInsights.data.comparisons.customers} />
+          <KpiComparisonCard label="Products" format="number" {...aiInsights.data.comparisons.products} />
+        </motion.div>
+      )}
+
+      {/* Row 6 (Sprint 10B): Opportunity Panel + Risk Panel */}
+      {!aiInsights.data.isEmpty && (
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ duration: 0.45, delay: 0.3 }}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+        >
+          <OpportunityPanel opportunities={aiInsights.data.opportunities} metrics={aiInsights.data.metrics} trends={aiInsights.data.trends} />
+          <RiskPanel risks={aiInsights.data.risks} />
+        </motion.div>
+      )}
     </div>
   )
 }

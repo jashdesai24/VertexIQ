@@ -7,6 +7,11 @@ import { deriveMetrics } from './metricsService'
 import { analyzeRevenueTrend, analyzeOrdersTrend, analyzeCustomerGrowth, analyzeProductGrowth } from './trendAnalyzer'
 import { detectOpportunities, computeProductMomentum } from './opportunityEngine'
 import { detectRisks } from './riskAnalyzer'
+import { computeBusinessIntelligenceScore } from './businessIntelligenceScore'
+import { generateExecutiveInsights } from './executiveInsightEngine'
+import { generateBusinessRecommendations } from './businessRecommendationEngine'
+import { compareRevenue, compareOrders, compareCustomers, compareProducts } from '@/utils/comparePeriods'
+import { computeConfidence } from '@/utils/aiConfidence'
 import { api } from './apiClient'
 import { demoOrders } from '@/data/demoOrders'
 
@@ -22,6 +27,14 @@ export function generateAIInsights(rows, meta = {}) {
       summary: 'Upload a CSV with order history to generate AI-powered business insights.',
       highlights: [],
       recommendations: [],
+      // Sprint 10B fields — safe empty defaults so consuming components
+      // never have to null-check every field individually.
+      businessIntelligenceScore: { overall: 0, growth: 0, retention: 0, stability: 0, risk: 0, operations: 0, breakdown: [] },
+      confidence: 'Low',
+      executiveInsights: null,
+      structuredRecommendations: [],
+      comparisons: null,
+      metrics: null,
     }
   }
 
@@ -40,6 +53,36 @@ export function generateAIInsights(rows, meta = {}) {
 
   const trends = { revenueTrend, ordersTrend, customerTrend, productTrend }
 
+  // Sprint 10B: everything below reuses the metrics/trends/opportunities/
+  // risks already computed above — nothing here re-derives data.
+  const businessIntelligenceScore = computeBusinessIntelligenceScore(rows, {
+    metrics,
+    revenueTrend,
+    ordersTrend,
+    customerTrend,
+    productTrend,
+    risks,
+  })
+  const confidence = computeConfidence({ rowCount: rows.length, trends: Object.values(trends) })
+  const executiveInsights = generateExecutiveInsights({ metrics, trends, opportunities, risks, businessIntelligenceScore, confidence })
+  const structuredRecommendations = generateBusinessRecommendations({ businessIntelligenceScore, risks, opportunities, trends })
+  const comparisons = {
+    revenue: compareRevenue(rows),
+    orders: compareOrders(rows),
+    customers: compareCustomers(rows),
+    products: compareProducts(rows),
+  }
+  // Trimmed subset (not the full metrics object with byProduct/byCustomer
+  // maps) — just what the new dashboard panels (Opportunity/Risk) need.
+  const metricsSummary = {
+    revenue: metrics.revenue,
+    customerCount: metrics.customerCount,
+    orderCount: metrics.orderCount,
+    repeatPurchaseRate: metrics.repeatPurchaseRate,
+    topCustomers: metrics.topCustomers,
+    topProducts: metrics.topProducts,
+  }
+
   return {
     isEmpty: false,
     isDemoData,
@@ -51,6 +94,13 @@ export function generateAIInsights(rows, meta = {}) {
     trends,
     opportunities,
     risks,
+    // Sprint 10B additions — all-new fields, nothing above this line changed.
+    businessIntelligenceScore,
+    confidence,
+    executiveInsights,
+    structuredRecommendations,
+    comparisons,
+    metrics: metricsSummary,
   }
 }
 
